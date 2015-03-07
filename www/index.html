@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Page Title</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1254" />
+	<link rel="stylesheet" href="css/jquery.mobile-1.4.5.min.css" />
+    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+	<script src="js/jquery-1.11.2.min.js"></script>
+	<script src="js/jquery.mobile-1.4.5.min.js"></script>
+    <script>
+        $(document).on("pageinit", "#mainpage", function () {
+
+            $(document).on("swipeleft swiperight", "#mainpage", function (e) {
+                // We check if there is no open panel on the page because otherwise
+                // a swipe to close the left panel would also open the right panel (and v.v.).
+                // We do this by checking the data that the framework stores on the page element (panel: open).
+                if ($.mobile.activePage.jqmData("panel") !== "open") {
+                    if (e.type === "swipeleft") {
+                        $("#menu1").panel("open");
+                    } else if (e.type === "swiperight") {
+                        $("#menu").panel("open");
+                    }
+                }
+            });
+        });
+    </script>
+    <script>
+        function onLoad() {
+            
+            if ((/(ipad|iphone|ipod|android|windows phone)/i.test(navigator.userAgent))) {
+                document.addEventListener('deviceready', initApp, false);
+            } else {
+                initApp();
+            }
+        }
+		var db=null;
+        var admobid = {};
+        if (/(android)/i.test(navigator.userAgent)) {
+            admobid = { // for Android
+                banner: 'ca-app-pub-0788803374124117/5904300211',
+                interstitial: 'ca-app-pub-0788803374124117/4713441810'
+            };
+        } else if (/(ipod|iphone|ipad)/i.test(navigator.userAgent)) {
+            admobid = { // for iOS
+                banner: 'ca-app-pub-0788803374124117/5904300211',
+                interstitial: 'ca-app-pub-0788803374124117/4713441810'
+            };
+        } else {
+            admobid = { // for Windows Phone
+                banner: 'ca-app-pub-0788803374124117/5904300211',
+                interstitial: 'ca-app-pub-0788803374124117/4713441810'
+            };
+        }
+        //alert(admobid.banner);
+        //alert(admobid.interstitial);
+        function initApp() {
+            if (!AdMob) { 
+            alert('admob plugin not ready'); 
+            return; 
+            }
+
+            db = window.sqlitePlugin.openDatabase(
+                // options
+                { name: "demo" },
+                // success callback
+                function (msg) {
+                    //alert("success: " + msg);
+                },
+                // error callback
+                function (msg) {
+                    alert("error: " + msg);
+                }
+            );
+
+            db.transaction(function (tx) {
+                tx.executeSql("CREATE TABLE IF NOT EXISTS Current (CurrentId integer primary key, Name text, Surname text,GsmNumber text)");
+                tx.executeSql(
+                    "INSERT INTO Current (Name, Surname,GsmNumber) VALUES (?,?,?)",
+                    ["Ersin", "Sivaz","0 536 873 27 91"],
+                    function (tx, res) {
+                        //alert("insertId: " + res.insertId + ", rows affected: " + res.rowsAffected);
+                    },
+                    function (tx, res) {
+                        alert('error: ' + res.message);
+                    });
+            });
+			
+            initAd();
+
+            // display the banner at startup
+            createSelectedBanner();
+        }
+       
+        function initAd() {
+            var defaultOptions = {
+                // bannerId: admobid.banner,
+                // interstitialId: admobid.interstitial,
+                // adSize: 'SMART_BANNER',
+                // width: integer, // valid when set adSize 'CUSTOM'
+                // height: integer, // valid when set adSize 'CUSTOM'
+                position: AdMob.AD_POSITION.BOTTOM_CENTER,
+                // offsetTopBar: false, // avoid overlapped by status bar, for iOS7+
+                bgColor: 'black', // color name, or '#RRGGBB'
+                // x: integer,		// valid when set position to 0 / POS_XY
+                // y: integer,		// valid when set position to 0 / POS_XY
+                isTesting: false, // set to true, to receiving test ad for testing purpose
+                // autoShow: true // auto show interstitial ad when loaded, set to false if prepare/show
+            };
+            AdMob.setOptions(defaultOptions);
+            registerAdEvents();
+        }
+        // optional, in case respond to events or handle error
+        function registerAdEvents() {
+            /* deprecated
+            document.addEventListener('onBannerFailedToReceive', function(data){ alert('error: ' + data.error + ', reason: ' + data.reason); });
+            document.addEventListener('onBannerReceive', function(){});
+            document.addEventListener('onBannerPresent', function(){});
+            document.addEventListener('onBannerLeaveApp', function(){});
+            document.addEventListener('onBannerDismiss', function(){});
+            
+            document.addEventListener('onInterstitialFailedToReceive', function(data){ alert('error: ' + data.error + ', reason: ' + data.reason); });
+            document.addEventListener('onInterstitialReceive', function(){});
+            document.addEventListener('onInterstitialPresent', function(){});
+            document.addEventListener('onInterstitialLeaveApp', function(){});
+            document.addEventListener('onInterstitialDismiss', function(){});
+            */
+
+            // new events, with variable to differentiate: adNetwork, adType, adEvent
+            document.addEventListener('onAdFailLoad', function (data) {
+                alert('error: ' + data.error +
+                        ', reason: ' + data.reason +
+                        ', adNetwork:' + data.adNetwork +
+                        ', adType:' + data.adType +
+                        ', adEvent:' + data.adEvent); // adType: 'banner' or 'interstitial'
+            });
+            document.addEventListener('onAdLoaded', function (data) { });
+            document.addEventListener('onAdPresent', function (data) { });
+            document.addEventListener('onAdLeaveApp', function (data) { });
+            document.addEventListener('onAdDismiss', function (data) { });
+        }
+
+        // click button to call following functions
+        function getSelectedAdSize() {
+            return "SMART_BANNER";
+        }
+
+        function getSelectedPosition() {
+            return parseInt(8);
+        }
+
+        function createSelectedBanner() {
+            var overlap = false;
+            var offsetTopBar = false;
+            AdMob.createBanner({ adId: admobid.banner, overlap: overlap, offsetTopBar: offsetTopBar, adSize: getSelectedAdSize(), position: getSelectedPosition() });
+        }
+
+        function GetData() {
+            db.transaction(function (tx) {
+                tx.executeSql(
+                    "select CurrentId,Name,Surname,GsmNumber from Current;",
+                    [],
+                    function (tx, res) {
+                        var div = document.getElementById("responseDiv");
+                        var temp = "<table data-role=\"table\" id=\"table-custom-2\" data-mode=\"columntoggle\" class=\"ui-body-d ui-shadow table-stripe ui-responsive\" data-column-btn-theme=\"b\" data-column-btn-text=\"Columns to display...\" data-column-popup-theme=\"a\">" +
+                                    "<thead>" +
+                                    "<tr>" +
+                                        "<th data-priority=\"1\">Current Id</th>" +
+                                        "<th data-priority=\"2\">Name</th>" +
+                                        "<th data-priority=\"3\">Surname</th>" +
+                                        "<th data-priority=\"4\">Gsm Number</th>" +
+                                        "<th data-priority=\"5\">Ek Alan 1</th>" +
+                                        "<th data-priority=\"5\">Ek Alan 2</th>" +
+                                        "<th data-priority=\"5\">Ek Alan 3</th>" +
+                                    "</tr>" +
+                                    "</thead>" +
+                                    "<tbody>";
+                        //alert(response.rows.length);
+                        for (var i = 0; i < res.rows.length; i++) {
+                            temp += "<tr>" +
+                                        "<td>" + res.rows.item(i).CurrentId + "</td>" +
+                                        "<td>" + res.rows.item(i).Name + "</td>" +
+                                        "<td>" + res.rows.item(i).Surname + "</td>" +
+                                        "<td>" + res.rows.item(i).GsmNumber + "</td>" +
+                                        "<td>" + res.rows.item(i).GsmNumber + "</td>" +
+                                        "<td>" + res.rows.item(i).GsmNumber + "</td>" +
+                                        "<td>" + res.rows.item(i).GsmNumber + "</td>" +
+                                    "</tr>";
+                        }
+
+                        temp += "<tbody>" +
+                                "</table>";
+
+                        div.innerHTML = temp;
+                    },
+                    function (tx, res) {
+                        alert('error: ' + res.message);
+                    });
+            });
+            
+
+        }
+
+
+        function ExitFromApp() {
+
+            navigator.app.exitApp();
+        }
+</script>
+
+</head>
+<body  onload="onLoad()">
+
+<div data-role="page" id="mainpage">
+
+	<div data-role="header" data-position="fixed">
+		<h1>Main</h1>
+        <a href="#menu" class="ui-btn ui-icon-bars ui-btn-icon-notext ui-corner-all">No Text</a>
+        <a href="#exitDialog" data-rel="dialog" data-transition="flip" class="ui-btn ui-icon-power ui-btn-icon-notext ui-corner-all" >No Text</a>
+	</div><!-- /header -->
+
+	<div role="main" class="ui-content">
+		<p>Main page</p>
+        
+        <button class="ui-btn ui-icon-bullets ui-btn-icon-left" id="btnGetData" onclick="GetData()">Get Data</button>
+        <div id="responseDiv">
+           
+        </div>
+	</div><!-- /content -->
+
+	<div data-role="footer" data-position="fixed">
+		<h4>Page Footer</h4>
+	</div><!-- /footer -->
+    <div data-role="panel" id="menu" data-theme="b" data-display="overlay">
+        <ul data-role="listview">
+            <li data-icon="action"><a href="#">Menu1</a></li>
+            <li data-icon="action"><a href="#">Menu2</a></li>
+            <li data-icon="action"><a href="#">Menu3</a></li>
+        </ul>
+    </div>
+</div><!-- /page -->
+
+<div data-role="page" id="exitDialog">
+
+	<div data-role="header">
+		<h1>Uygulamayı Kapat?</h1>
+	</div><!-- /header -->
+
+	<div role="main" class="ui-content">
+       <p>Uygulamadan çıkmak istiyor musunuz?</p>
+       <a href="#" class="ui-btn ui-btn-inline ui-icon-power ui-btn-icon-left" onclick="ExitFromApp()">Çıkış</a>
+       <a href="#mainpage" class="ui-btn ui-btn-inline ui-icon-back ui-btn-icon-left">İptal</a> 
+	</div><!-- /content -->
+</div><!-- /page -->
+
+
+
+</body>
+</html>
